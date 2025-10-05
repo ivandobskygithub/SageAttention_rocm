@@ -1,0 +1,2 @@
+[console_scripts]
+sage-rocm7-test = sageattention3_rocm7.test:main

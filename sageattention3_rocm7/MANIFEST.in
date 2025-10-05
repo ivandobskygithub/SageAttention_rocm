@@ -1,0 +1,29 @@
+# Package manifest for SageAttention3 ROCm7
+
+# Include all HIP source files
+recursive-include hip *.hip.cpp *.h *.hpp
+
+# Include Python package files
+recursive-include sage_attention_rocm7 *.py *.cpp *.h
+
+# Include build system files
+include CMakeLists.txt
+include setup.py
+include build.bat
+include BUILD.md
+include README.md
+
+# Include tests
+recursive-include tests *.py *.hip.cpp
+
+# Exclude compiled files and build artifacts
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude *.so
+global-exclude *.pyd
+global-exclude *.o
+global-exclude *.obj
+prune build
+prune dist
+prune *.egg-info

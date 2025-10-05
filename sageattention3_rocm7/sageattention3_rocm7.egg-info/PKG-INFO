@@ -1,0 +1,38 @@
+Metadata-Version: 2.4
+Name: sageattention3-rocm7
+Version: 0.1.0
+Summary: SageAttention3 ROCm7 - High-performance attention with INT4 quantization for AMD GPUs
+Home-page: https://github.com/sageattn/sageattention
+Author: SageAttention Team
+Project-URL: Bug Reports, https://github.com/sageattn/sageattention/issues
+Project-URL: Source, https://github.com/sageattn/sageattention
+Keywords: attention transformer quantization rocm amd gpu int4 fp4
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Operating System :: Microsoft :: Windows
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: torch>=2.0.0
+Requires-Dist: numpy>=1.19.0
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: project-url
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+SageAttention3 ROCm7 - High-performance attention with INT4 quantization for AMD GPUs
