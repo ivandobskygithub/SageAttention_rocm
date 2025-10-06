@@ -22,7 +22,8 @@ Jintao Zhang, Jia Wei, Pengle Zhang, Xiaoming Xu, Haofeng Huang, Haoxu Wang, Kai
 ## Current Features
 <!-- This is a beta release of SageAttention2. We welcome any feedback on accuracy, performance issues, bugs, feature requests, or suggestions. Please feel free to open an issue or launch a pull request! -->
 
-+ Optmized kernels for **Ampere, Ada and Hopper GPUs.**
++ Optimized kernels for **Ampere, Ada and Hopper GPUs.**
++ **🆕 ROCm Support for AMD GPUs** - Full support for MI100/200/300 and RX 7900 series ([see ROCm documentation](./README_ROCM.md))
 + INT8 quantization and smoothing for $QK^\top$ with support for varying granularities.
 + FP8 quantization for $PV$, and FP16 accumulator for FP8/FP16 $PV$.
 + Two-level accumulation strategy for $PV$ to improve accuracy in FP8 MMA and WGMMA.
@@ -66,7 +67,9 @@ Jintao Zhang, Jia Wei, Pengle Zhang, Xiaoming Xu, Haofeng Huang, Haoxu Wang, Kai
 
 ## Installation
 ### Base environment
-+ `python>=3.9`   , `torch>=2.3.0`  , `triton>=3.0.0` 
+
+#### For NVIDIA GPUs (CUDA)
++ `python>=3.9`   , `torch>=2.3.0`  , `triton>=3.0.0`
 - `CUDA`:
   + `>=12.8` for Blackwell or SageAttention2++
   + `>=12.4` for fp8 support on Ada
@@ -74,8 +77,15 @@ Jintao Zhang, Jia Wei, Pengle Zhang, Xiaoming Xu, Haofeng Huang, Haoxu Wang, Kai
   + `>=12.0` for Ampere
 + `flash-attn` for benchmarking
 
+#### For AMD GPUs (ROCm) 🆕
++ `python>=3.8` , `torch>=2.0.0` with ROCm support
++ `ROCm>=6.0` (7.0+ recommended)
++ AMD GPU: MI100/200/300 series or RX 7900 series
++ See [ROCm Installation Guide](./README_ROCM.md) for detailed setup
+
 ### Install Package
 
+#### CUDA Installation
 For SageAttention V1 in Triton (slower than SageAttention V2/V2++/V3), refer to [SageAttention-1](https://github.com/thu-ml/SageAttention/tree/sageattention-1) and install using pip: `pip install sageattention==1.0.6`
 
 To use SageAttention 2.2.0 (containing SageAttention2++), please **compile from source**:
@@ -85,6 +95,23 @@ cd SageAttention
 export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=32 # parallel compiling (Optional)
 python setup.py install  # or pip install -e .
 ```
+
+#### ROCm Installation 🆕
+To use SageAttention with AMD GPUs:
+```bash
+# Install PyTorch with ROCm support first
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+
+# Clone and install ROCm version
+git clone https://github.com/ivandobskygithub/SageAttention_rocm.git
+cd SageAttention_rocm && git checkout rocm-full-port
+cd sageattention_rocm_full && pip install -e .
+
+# Enable AOTriton (optional)
+export TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1
+```
+
+For detailed ROCm setup and benchmarks, see [ROCm Documentation](./README_ROCM.md).
 
 To benchmark the speed against FlashAttention3, please compile FlashAttention3 from source:
 ```
