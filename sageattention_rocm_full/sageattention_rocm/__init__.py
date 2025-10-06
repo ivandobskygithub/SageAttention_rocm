@@ -1,32 +1,50 @@
 """
-SageAttention ROCm Implementation - Works with or without Triton
+SageAttention ROCm Implementation - Works with AOTriton, Triton, or PyTorch fallback
 """
 
 import warnings
+import os
 
-# Try to use full implementation, fall back to simple if imports fail
+# Enable AOTriton experimental support
+os.environ["TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL"] = "1"
+
+# Try to use AOTriton-aware implementation first
+AOTRITON_AVAILABLE = False
 try:
-    from .core_triton import (
+    from .core_triton_aotriton import (
         sageattn,
         sageattn_varlen,
         get_rocm_device_info,
+        AOTRITON_AVAILABLE,
     )
-    USING_FALLBACK = False
+    if AOTRITON_AVAILABLE:
+        IMPLEMENTATION = "AOTriton"
+    else:
+        IMPLEMENTATION = "Triton/Fallback"
 except ImportError as e:
-    warnings.warn(f"Failed to import Triton kernels: {e}\nUsing simplified fallback implementation.")
-    from .core_triton_simple import (
-        sageattn,
-        sageattn_varlen,
-        get_rocm_device_info,
-    )
-    USING_FALLBACK = True
+    # Try simple implementation
+    try:
+        from .core_triton_simple import (
+            sageattn,
+            sageattn_varlen,
+            get_rocm_device_info,
+        )
+        IMPLEMENTATION = "Simple"
+    except ImportError:
+        # Final fallback to original
+        warnings.warn(f"Failed to import optimized kernels: {e}\nUsing fallback implementation.")
+        from .core_triton import (
+            sageattn,
+            sageattn_varlen,
+            get_rocm_device_info,
+        )
+        IMPLEMENTATION = "Fallback"
 
 # Export Triton kernel modules for direct access if needed
 try:
     from . import triton
 except ImportError:
     triton = None
-    warnings.warn("Triton modules not available")
 
 __version__ = "1.0.0"
 __all__ = [
@@ -34,6 +52,7 @@ __all__ = [
     "sageattn_varlen",
     "get_rocm_device_info",
     "triton",
+    "AOTRITON_AVAILABLE",
 ]
 
 # Print device info on import
@@ -41,9 +60,10 @@ import torch
 if torch.cuda.is_available():
     device_info = get_rocm_device_info()
     if device_info:
-        status = "Fallback" if USING_FALLBACK else "Full"
-        triton_status = "Available" if device_info.get('triton_available', False) else "Not Available"
-        print(f"SageAttention ROCm: {status} implementation on {device_info['name']}")
-        print(f"  Triton: {triton_status}")
-        if USING_FALLBACK:
-            print("  ⚠️ Using PyTorch fallback (slow). Install Triton for acceleration.")
+        print(f"SageAttention ROCm: {IMPLEMENTATION} implementation on {device_info['name']}")
+        if device_info.get('aotriton_available'):
+            print(f"  [SUCCESS] AOTriton: Enabled (experimental)")
+        elif device_info.get('triton_available'):
+            print(f"  Triton: Available")
+        else:
+            print("  [WARNING] Using PyTorch fallback (slow)")

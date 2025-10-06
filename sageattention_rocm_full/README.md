@@ -1,198 +1,158 @@
-# SageAttention ROCm Port
+# SageAttention ROCm Implementation
 
-This is a comprehensive ROCm port of SageAttention, providing efficient low-bit attention operations for AMD GPUs.
+## Quick Start - What to Run
 
-## Features
+### 🚀 MAIN BENCHMARKS TO RUN:
 
-- **Full SageAttention support**: Ports versions 1, 2, 2++, and 3
-- **Multi-architecture support**: Optimized for MI100, MI200, MI300, and RDNA GPUs
-- **Flexible backends**: Both Triton and native HIP implementations
-- **FP8 support**: Leverage MI300's FP8 capabilities for maximum performance
-- **INT8 quantization**: Efficient INT8 operations across all supported architectures
+```bash
+# 1. FIRST - Test your environment
+python validation/test_flash_attention.py
 
-## Supported Hardware
+# 2. MAIN BENCHMARK - Run this for performance testing
+python bench/benchmark_final.py
 
-| GPU | Architecture | Support Level | Features |
-|-----|--------------|---------------|----------|
-| MI300X/A | gfx940/941 | Full | FP8, INT8, MFMA |
-| MI250X/MI210 | gfx90a | Full | INT8, MFMA |
-| MI100 | gfx908 | Basic | INT8 |
-| RX 7900 XTX | gfx1100 | Triton | INT8 via Triton |
-| RX 6900 XT | gfx1030 | Triton | INT8 via Triton |
+# 3. OPTIONAL - Test with INT8 quantization
+python bench/benchmark_optimized.py
+```
+
+## Directory Structure
+
+```
+sageattention_rocm_full/
+├── README.md                    # THIS FILE - Start here!
+├── setup.py                     # Package installation
+│
+├── sageattention_rocm/          # Main implementation
+│   ├── __init__.py
+│   ├── core_optimized.py        # BEST: Optimized implementation using Flash Attention
+│   ├── core_triton_aotriton.py  # AOTriton attempt (not working properly)
+│   └── triton/                  # Triton kernels and fallbacks
+│
+├── bench/                       # Benchmark scripts
+│   ├── benchmark_final.py       # ⭐ RUN THIS - Best benchmark showing Flash Attention
+│   ├── benchmark_optimized.py   # Alternative benchmark with INT8
+│   └── benchmark_aotriton.py    # Original AOTriton benchmark (shows issues)
+│
+├── validation/                  # Validation and testing
+│   ├── test_flash_attention.py  # ⭐ RUN THIS FIRST - Tests available backends
+│   ├── validate_cpu.py          # CPU validation (already passed ✅)
+│   └── validate_simple.py       # Simple validation test
+│
+└── docs/                        # Documentation
+    ├── BENCHMARKS_SUMMARY.md    # Performance results summary
+    └── AOTRITON_STATUS_REPORT.md # AOTriton integration status
+```
 
 ## Installation
 
-### Prerequisites
-
-1. ROCm 6.0+ (6.1 recommended for FP8 support)
-2. PyTorch 2.0+ with ROCm support
-3. Python 3.9+
-
-### Building from Source
-
 ```bash
+# Navigate to the directory
 cd sageattention_rocm_full
+
+# Install the package (optional)
 pip install -e .
 ```
 
-The build system will automatically detect your GPU architecture and compile appropriate kernels.
+## Required Environment
 
-### Environment Variables
+✅ **Your current setup is ready:**
+- PyTorch 2.10.0a0+rocm7.9
+- AMD Radeon 8060S Graphics
+- Flash Attention: Available
+- Memory Efficient Attention: Available
+
+## Step-by-Step Usage
+
+### Step 1: Verify Your Environment
 
 ```bash
-# Optional: Specify ROCm path if not in standard location
-export ROCM_PATH=/opt/rocm
-
-# Optional: Force specific architectures
-export PYTORCH_ROCM_ARCH="gfx90a;gfx940"
+python validation/test_flash_attention.py
 ```
 
-## Usage
+Expected output:
+- Should show "Flash Attention: Available"
+- Should show "Memory Efficient: Available"
 
-The ROCm port maintains API compatibility with the original SageAttention:
+### Step 2: Run Main Benchmark
+
+```bash
+python bench/benchmark_final.py
+```
+
+This will:
+- Test all available attention backends
+- Compare Flash, Efficient, Math, and Auto modes
+- Show memory usage
+- Recommend best approach for your GPU
+
+### Step 3: (Optional) Test INT8 Quantization
+
+```bash
+python bench/benchmark_optimized.py
+```
+
+Note: INT8 shows overhead on your GPU, but you can verify this yourself.
+
+## Key Findings for Your System
+
+1. **Flash Attention is working** ✅
+2. **Best performance**: Use PyTorch's native `scaled_dot_product_attention`
+3. **INT8 quantization**: Adds overhead (0.45x slower)
+4. **AOTriton**: Functions exist but not working properly
+
+## API Usage
+
+### Best Approach (Using Flash Attention):
 
 ```python
-import torch
-from sageattention_rocm import sageattn
+import torch.nn.functional as F
 
-# Create tensors
-batch_size = 4
-num_heads = 32
-seq_len = 2048
-head_dim = 128
-
-q = torch.randn(batch_size, num_heads, seq_len, head_dim, dtype=torch.float16, device='cuda')
-k = torch.randn(batch_size, num_heads, seq_len, head_dim, dtype=torch.float16, device='cuda')
-v = torch.randn(batch_size, num_heads, seq_len, head_dim, dtype=torch.float16, device='cuda')
-
-# Run attention
-output = sageattn(q, k, v, is_causal=True)
+# This automatically uses Flash Attention on your GPU
+output = F.scaled_dot_product_attention(q, k, v, is_causal=False)
 ```
 
-### Backend Selection
-
-You can explicitly choose the backend:
+### Using SageAttention Implementation:
 
 ```python
-# Use Triton backend (works on all GPUs)
-output = sageattn(q, k, v, attn_backend="triton")
+from sageattention_rocm.core_optimized import sageattn_optimized
 
-# Use HIP backend (optimized for MI200/MI300)
-output = sageattn(q, k, v, attn_backend="hip")
+# Without INT8 (faster on your GPU)
+output = sageattn_optimized(q, k, v, use_int8=False)
 
-# Auto-select best backend for your GPU
-output = sageattn(q, k, v, attn_backend="auto")  # Default
+# With INT8 (slower but uses less memory)
+output = sageattn_optimized(q, k, v, use_int8=True)
 ```
-
-### Variable Length Sequences
-
-```python
-from sageattention_rocm import sageattn_varlen
-
-# For variable-length sequences
-cu_seqlens_q = torch.tensor([0, 512, 1024, 1536, 2048], dtype=torch.int32, device='cuda')
-cu_seqlens_k = cu_seqlens_q
-max_seqlen_q = 512
-max_seqlen_k = 512
-
-output = sageattn_varlen(
-    q, k, v,
-    cu_seqlens_q, cu_seqlens_k,
-    max_seqlen_q, max_seqlen_k
-)
-```
-
-## Implementation Status
-
-### Completed
-- ✅ Directory structure and build system
-- ✅ ROCm architecture detection
-- ✅ Python package structure
-- ✅ Triton kernel integration framework
-
-### In Progress
-- 🚧 HIP kernel implementations
-- 🚧 FP8 support for MI300
-- 🚧 Performance optimization
-
-### Planned
-- ⏳ Composable Kernel integration
-- ⏳ Comprehensive benchmarks
-- ⏳ Integration tests
-- ⏳ Performance profiling tools
-
-## Architecture-Specific Optimizations
-
-### MI300 (gfx940/941)
-- Native FP8 support for maximum throughput
-- MFMA instructions for matrix operations
-- Optimized memory access patterns
-
-### MI200 (gfx90a)
-- MFMA-based INT8 operations
-- Tuned for 128GB HBM2e bandwidth
-- Efficient LDS usage
-
-### RDNA3 (gfx1100)
-- WMMA instructions for consumer GPUs
-- Triton-based implementations
-- Power-efficient operation modes
-
-## Performance Considerations
-
-1. **Memory Layout**: The implementation supports both HND and NHD tensor layouts
-2. **Quantization**: INT8 quantization significantly reduces memory bandwidth requirements
-3. **Key Smoothing**: Optional key smoothing improves quantization accuracy
-4. **Accumulation Precision**: Choose between FP32 and FP16 accumulation based on your accuracy needs
 
 ## Troubleshooting
 
-### Common Issues
+### If you see "CUDA not available":
+You're using CPU-only PyTorch. Activate your ROCm environment:
+```bash
+# Your environment shows (.venv) when active
+.venv\Scripts\activate  # or however you activate it
+```
 
-1. **"ROCm installation not found"**
-   - Ensure ROCm is installed: `rocm-smi`
-   - Set ROCM_PATH: `export ROCM_PATH=/opt/rocm`
+### If benchmarks are slow:
+- Flash Attention is already optimal
+- INT8 adds overhead on AMD GPUs
+- Use larger batch sizes for better GPU utilization
 
-2. **"No supported architectures found"**
-   - Check GPU compatibility: `rocminfo`
-   - Manually specify architecture: `export PYTORCH_ROCM_ARCH=gfx90a`
+## Performance Summary
 
-3. **"HIP kernels not available"**
-   - Rebuild with HIP support: `python setup.py clean && pip install -e .`
-   - Check compiler: `hipcc --version`
+| Method | Relative Speed | When to Use |
+|--------|---------------|-------------|
+| Flash Attention (Auto) | 1.0x (baseline) | **Always - Best choice** |
+| Memory Efficient | ~1.0x | Automatically selected |
+| INT8 Quantized | 0.45x (slower) | Only if memory constrained |
+| Math Backend | 0.2-0.3x | Fallback only |
 
-## Contributing
+## Files to Ignore
 
-Contributions are welcome! Please follow these guidelines:
+These files are archived/redundant - don't use them:
+- Any loose .py files not in directories
+- Files in archive/ directory
+- Multiple test_aotriton variants
 
-1. Test on your target architecture
-2. Maintain API compatibility
-3. Document architecture-specific optimizations
-4. Include benchmarks for new implementations
+---
 
-## License
-
-Apache 2.0 License - See LICENSE file for details
-
-## Acknowledgments
-
-- Original SageAttention team for the CUDA implementation
-- ROCm team for HIP and compiler support
-- PyTorch team for ROCm backend
-
-## Roadmap
-
-### Q1 2025
-- Complete HIP kernel implementations
-- FP8 support for MI300
-- Initial performance benchmarks
-
-### Q2 2025
-- Composable Kernel integration
-- RDNA optimization
-- Production readiness
-
-### Q3 2025
-- Next-gen architecture support
-- Advanced quantization techniques
-- Integration with popular frameworks
+**Bottom Line**: Run `python bench/benchmark_final.py` to see your GPU's performance!

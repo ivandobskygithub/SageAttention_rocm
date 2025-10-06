@@ -195,11 +195,11 @@ def main():
     print("=" * 60)
 
     if all_passed:
-        print("✅ All CPU tests PASSED")
+        print("[SUCCESS] All CPU tests PASSED")
         print("\nThe implementation logic is correct.")
         print("For GPU acceleration, install Triton and run on a CUDA/ROCm device.")
     else:
-        print("❌ Some tests FAILED")
+        print("[ERROR] Some tests FAILED")
         print("\nPlease check the implementation.")
 
     return 0 if all_passed else 1
