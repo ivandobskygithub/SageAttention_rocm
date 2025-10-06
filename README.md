@@ -23,7 +23,7 @@ Jintao Zhang, Jia Wei, Pengle Zhang, Xiaoming Xu, Haofeng Huang, Haoxu Wang, Kai
 <!-- This is a beta release of SageAttention2. We welcome any feedback on accuracy, performance issues, bugs, feature requests, or suggestions. Please feel free to open an issue or launch a pull request! -->
 
 + Optimized kernels for **Ampere, Ada and Hopper GPUs.**
-+ **🆕 ROCm Support for AMD GPUs** - Full support for MI100/200/300 and RX 7900 series ([see ROCm documentation](./README_ROCM.md))
++ **🆕 ROCm Support for AMD GPUs** - Community port for MI100/200/300 and RX 7900 series (see [ROCm Port Status](#rocm-port-status) below)
 + INT8 quantization and smoothing for $QK^\top$ with support for varying granularities.
 + FP8 quantization for $PV$, and FP16 accumulator for FP8/FP16 $PV$.
 + Two-level accumulation strategy for $PV$ to improve accuracy in FP8 MMA and WGMMA.
@@ -209,6 +209,39 @@ We provide a benchmarking script to compare the speed of different kernels inclu
 
 ![Local Image](./assets/26.png)
 *Note: SageAttention2++ achieves higher speed.*
+
+## ROCm Port Status
+
+### 🆕 AMD GPU Support (Community Implementation)
+
+A comprehensive ROCm port has been developed to enable SageAttention on AMD GPUs. This is a **community-driven implementation** separate from the core CUDA version.
+
+**Current Status:**
+- ✅ **Functional**: Full implementation validated with <3% error vs baseline
+- ✅ **Flash Attention**: Native support via PyTorch ROCm
+- ⚠️ **INT8 Performance**: Shows overhead (0.45x) rather than speedup on current AMD architectures
+- 🚧 **Testing Limited**: Native RDNA 4.0 support not yet available, blocking further optimization testing
+
+**Supported Hardware:**
+- AMD MI100/MI200/MI300 series (CDNA2/3)
+- AMD Radeon RX 7900 XTX/XT (RDNA3)
+- AMD Radeon Pro W7900/W7800
+
+**Implementation Details:**
+- Repository: [github.com/ivandobskygithub/SageAttention_rocm](https://github.com/ivandobskygithub/SageAttention_rocm)
+- Branch: `rocm-full-port`
+- Full documentation: [README_ROCM.md](./README_ROCM.md)
+- Directory: `sageattention_rocm_full/`
+
+**Key Findings:**
+- PyTorch's built-in Flash Attention works optimally on AMD GPUs
+- INT8 quantization adds overhead due to architecture differences
+- Best performance achieved using native PyTorch attention operations
+- AOTriton functions present but not fully functional in current ROCm builds
+
+**Note on RDNA 4.0:** Further testing and optimization are pending native RDNA 4.0 support in ROCm drivers. The current implementation is optimized for RDNA3 and CDNA architectures.
+
+For detailed installation, benchmarks, and usage instructions, see the [comprehensive ROCm documentation](./README_ROCM.md).
 
 ## Citation
 **If you use this code or find our work valuable, please cite:**

@@ -209,13 +209,19 @@ SageAttention/
 
 ## 🐛 Known Issues & Limitations
 
+### RDNA 4.0 Support
+- **Status**: Testing blocked due to lack of native RDNA 4.0 support in current ROCm drivers
+- **Impact**: Unable to optimize or validate performance on next-generation AMD GPUs
+- **Timeline**: Pending AMD's official RDNA 4.0 ROCm driver release
+
 ### AOTriton
 - AOTriton functions exist in PyTorch but may not work correctly
 - Error: "This operator should be overridden in python"
 - **Solution**: Implementation automatically falls back to Flash Attention
 
 ### INT8 Performance
-- INT8 quantization shows overhead rather than speedup on some AMD GPUs
+- INT8 quantization shows overhead rather than speedup on current AMD architectures
+- Measured 0.45x speed (slower) compared to native Flash Attention
 - **Solution**: Use `use_int8=False` for better performance
 
 ### Windows-Specific
